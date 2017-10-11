@@ -62,6 +62,28 @@ module RSpotify
 
       headers = get_headers(params)
       headers['Accept-Language'] = ENV['ACCEPT_LANGUAGE'] if ENV['ACCEPT_LANGUAGE']
+
+      begin
+        response = RestClient.send(verb, url, *params)
+      rescue RestClient::Unauthorized
+        if @client_token
+          authenticate(@client_id, @client_secret)
+
+          obj = params.find{|x| x.is_a?(Hash) && x['Authorization']}
+          obj['Authorization'] = "Bearer #{@client_token}"
+
+          response = retry_connection verb, url, params
+        end
+      end
+    end
+
+    def send_request_with_user_credentials(verb, path, *params)
+      url = path.start_with?('http') ? path : API_URI + path
+
+      url, query = *url.split('?')
+      url = Addressable::URI.encode(url)
+      url << "?#{query}" if query
+
       response = RestClient.send(verb, url, *params)
 
       return response if raw_response
