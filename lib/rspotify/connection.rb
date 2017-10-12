@@ -56,12 +56,10 @@ module RSpotify
 
     def send_request(verb, path, *params)
       url = path.start_with?('http') ? path : API_URI + path
+
       url, query = *url.split('?')
       url = Addressable::URI.encode(url)
       url << "?#{query}" if query
-
-      headers = get_headers(params)
-      headers['Accept-Language'] = ENV['ACCEPT_LANGUAGE'] if ENV['ACCEPT_LANGUAGE']
 
       begin
         response = RestClient.send(verb, url, *params)

@@ -50,11 +50,13 @@ module RSpotify
         access_refresh_proc.call(response['access_token'], response['expires_in'])
       end
 
-      User.find(user_id).update access_token: response['access_token']
+      
+    @@users_credentials[user_id]['token'] = response['access_token']
 
     rescue RestClient::BadRequest => e
       raise e if e.response !~ /Refresh token revoked/
     end
+
     private_class_method :refresh_token
 
     def self.extract_custom_headers(params)
