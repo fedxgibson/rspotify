@@ -38,6 +38,7 @@ module RSpotify
       response = RestClient.post(TOKEN_URI, request_body, RSpotify.send(:auth_header))
       response = JSON.parse(response)
       @@users_credentials[user_id]['token'] = response['access_token']
+
       access_refresh_proc = @@users_credentials[user_id]['access_refresh_callback']
       # If the access token expires and a new one is granted via the refresh
       # token, then this proc will be called with two parameters:
@@ -48,6 +49,9 @@ module RSpotify
       if (access_refresh_proc.respond_to? :call)
         access_refresh_proc.call(response['access_token'], response['expires_in'])
       end
+
+      User.find(user_id).update access_token: response['access_token']
+
     rescue RestClient::BadRequest => e
       raise e if e.response !~ /Refresh token revoked/
     end
@@ -149,7 +153,18 @@ module RSpotify
       url = "me/player"
       response = User.oauth_get(@id, url)
       return response if RSpotify.raw_response
+
       response ? Player.new(self, response) : Player.new(self)
+    end
+
+    
+
+    # Allow browser to trigger playback in the user's currently active spotify app.
+    # User must be a premium subscriber for this feature to work.
+    def play_track(song_uri)
+      url = "me/player/play"
+      params = {"uris": [song_uri]}
+      User.oauth_put(@id, url, params.to_json)
     end
 
     # Get the current user’s recently played tracks. Requires the *user-read-recently-played* scope.
